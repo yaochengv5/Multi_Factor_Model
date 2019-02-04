@@ -1,2 +1,5 @@
 2019年2月2日
 建立r project
+
+2019年2月4日
+编辑functions文件夹中函数，用于从wind API中获取数据

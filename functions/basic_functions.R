@@ -5,13 +5,16 @@ require(WindR)
 w.start()
 
 ## 获取股票收益的截面数据
-MFM_reture <- function(stock_code, from, to, frequency="M"){
+MFM_reture <- function(stock_code, from, to, frequency="M", show_chinese = FALSE){
   # stock_code:【向量】股票名称构成的向量
   # from: 【字符串】 时间起点
   # to：【字符串】时间终点
   # frequency: 【单个字符串】“M”月（默认）“D”日“W”周“Q”季度"Y"年度
-        w_wsd_data<-w.wsd(stock_code,"pct_chg",from,to,"Period=M;PriceAdj=B")$Data 
+  # show_chinese: 【逻辑字符】，默认显示股票代码；可以修改为显示股票中文名称
+        w_wsd_data<-w.wsd(stock_code,"pct_chg",from,to,str_c("Period=",frequency,";PriceAdj=B"))$Data 
         
+        if (show_chinese == TRUE)
+        names(w_wsd_data)[-1] <- sto_name(stock_code)
 }
 
 
@@ -24,23 +27,30 @@ MFM_reture <- function(stock_code, from, to, frequency="M"){
         # 从data文件夹中获取数据文件
                 sto_name <- suppressMessages(read_csv("data/stock_names.csv"))
                 
-        # 去掉代码中的“ST”
-                ifelse(str_detect(code, "^[Ss][Tt]"),
-                        code <- str_sub(code,3),
-                        NA)
+         #适用于1×1变量的函数
+                sto_name_toapply <- function(code){
+                         # 去掉代码中的“ST”
+                                ifelse(str_detect(code, "^[Ss][Tt]"),
+                                        code <- str_sub(code,3),
+                                        NA)
+                                
+                        # 截取code的前6位
+                                code6 <- str_sub(code,1,6)
+                                
+                        # code前六位是否是数字？
+                                ifelse(!str_detect(code6, "\\d{6}"),
+                                        invisible(stop("请确保输入代码的前6位是数字")),
+                                        NA)
+                        # 哪些行匹配？ 
+                                good <- str_detect(sto_name[[3]], str_c("^",code6,"$"))
+                        
+                        # 获取符合条件的股票代码
+                                sto_name[[1]][good]
+                }
                 
-        # 截取code的前6位
-                code6 <- str_sub(code,1,6)
+        # 通过apply函数向量化
+                lapply(code, sto_name_toapply) %>% as.matrix()
                 
-        # code前六位是否是数字？
-                ifelse(!str_detect(code6, "\\d{6}"),
-                        invisible(stop("请确保输入代码的前6位是数字")),
-                        NA)
-        # 哪些行匹配？ 
-                good <- str_detect(sto_name[[3]], str_c("^",code6,"$"))
-        
-        # 获取符合条件的股票代码
-                sto_name[[1]][good]
 }
 
 
@@ -56,15 +66,22 @@ sto_code <- function(stockname, code_style = "wind", exact = TRUE){
         # 从data文件夹中获取数据文件
         sto_name <- suppressMessages(read_csv("data/stock_names.csv"))
         
-        # 哪些行匹配？        
-        if(exact==TRUE)
-                good <- str_detect(sto_name[[1]], str_c("^",stockname,"$")) 
-        else
-                good <- str_detect(sto_name[[1]], stockname) 
         
-        # 获取符合条件的股票名称
-        sto_name[[str_c(code_style,"_name")]][good]
+        # 适用于1×1变量的函数
+        sto_code_toapply <- function(stockname, code_style = "wind", exact = TRUE){
+                
+        
+                 # 哪些行匹配？        
+                if(exact==TRUE)
+                         good <- str_detect(sto_name[[1]], str_c("^",stockname,"$")) 
+                else
+                         good <- str_detect(sto_name[[1]], stockname) 
+        
+                # 获取符合条件的股票名称
+                 sto_name[[str_c(code_style,"_name")]][good]
         }
-
-
+        
+        # 通过apply函数向量化
+        lapply(stockname, sto_code_toapply) %>% as.matrix()
+}
               
